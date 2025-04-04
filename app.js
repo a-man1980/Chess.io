@@ -77,7 +77,7 @@ io.on("connection", (socket) => {
   
         // Check for game-ending conditions 
         if (chess.isCheckmate()) { 
-          const winner = chess.turn() === "w" ? "Black" : "White"; //say white ne checkmate kra to uske baad chess.turn update hoke black ho gyi hogi isliye ulta h
+          const winner = chess.turn() === "w" ? "b" : "w"; //say white ne checkmate kra to uske baad chess.turn update hoke black ho gyi hogi isliye ulta h
           io.emit("gameEnd", { result: "Checkmate", winner });
           console.log(`Game Over: Checkmate! Winner: ${winner}`);
           resetGame();

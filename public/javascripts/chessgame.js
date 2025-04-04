@@ -7,6 +7,28 @@ let sourceSquare = null;
 let playerRole = null;
 let lastMove = null; // Tracking  the last move for visual indicators(pta chlta rhe kiski baari h)
 
+// funcction for launching confetti
+// 🎉 Confetti blast on game win
+function launchConfetti() {
+    const duration = 2 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+
+    const interval = setInterval(() => {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+            return clearInterval(interval);
+        }
+
+        confetti(Object.assign({}, defaults, {
+            particleCount: 40,
+            origin: { x: Math.random(), y: Math.random() - 0.2 }
+        }));
+    }, 250);
+}
+
+
 // Render the chessboard
 const renderBoard = () => {
     const board = chess.board();
@@ -50,6 +72,11 @@ const renderBoard = () => {
                 );
                 pieceElement.innerText = getPieceUnicode(square); //piece ka unicode nikala aur innertext ki jgh daldiya
                 pieceElement.draggable = playerRole === square.color; //agr square color is equal to the player role tbhi us piece ko draggable bnao
+                
+                // for fallen king effect
+                if (square.type === "k") {
+                    pieceElement.classList.add(square.color === "w" ? "white-king" : "black-king");
+                }
 
                 pieceElement.addEventListener("dragstart", (e) => {
                     // agr dragstart ho kisi piece pe then set the value of dragged piece and soource square
@@ -168,11 +195,42 @@ socket.on("spectatorRole", () => {
     renderBoard();
 });
 
-socket.on("boardState", (fen) => {
-    // agr peeche se move ke baad board state aaye updated vali fen notation me then load kro and render
-    chess.load(fen);
-    renderBoard();
+socket.on("boardState", (board) => {
+    board.forEach((row, i) => {
+        row.forEach((cell, j) => {
+            if (cell) {
+                const piece = document.createElement("img");
+                piece.src = `/pieces/${cell.color}${cell.type.toUpperCase()}.png`;
+                piece.draggable = false;
+                piece.classList.add("w-full", "h-full");
+                cells[i][j].appendChild(piece);
+            }
+        });
+    });
+
+    // Check for game over
+    if (chess.game_over()) {
+        const modal = document.getElementById("end-game-modal");
+        const winnerText = document.getElementById("winner-text");
+        let result = "";
+
+        if (chess.in_checkmate()) {
+            result = chess.turn() === "w" ? "Black Wins by Checkmate" : "White Wins by Checkmate";
+        } else if (chess.in_draw()) {
+            result = "Draw!";
+        } else if (chess.in_stalemate()) {
+            result = "Stalemate!";
+        } else if (chess.insufficient_material()) {
+            result = "Draw by Insufficient Material";
+        } else {
+            result = "Game Over";
+        }
+
+        winnerText.innerText = result;
+        modal.classList.remove("hidden");
+    }
 });
+
 
 socket.on("move", (move) => {
     chess.move(move); //move emit ho peeche se to frontend bhi move kro
@@ -182,11 +240,30 @@ socket.on("move", (move) => {
 
 // agr backend se emit hua gamened then result aaya hoga use alert me dalke users ko btao
 socket.on("gameEnd", (result) => {
-    alert(`Game Over: ${result.result}${result.winner ? `, Winner: ${result.winner}` : ""}`);//agr result.winner h that will only be in the case of checkmate then print krvao
-    lastMove = null; // Clear last move 
-    // ab checkmate hogya h no need to show prev move now
-    renderBoard();//render the board
+    lastMove = null;
+
+    const modal = document.getElementById("end-game-modal");
+    const winnerText = document.getElementById("winner-text");
+
+    let message = "Game Over";
+
+    if (result.result.toLowerCase() === "checkmate") {
+        message = result.winner === "w" ? "White Wins by Checkmate" : "Black Wins by Checkmate";
+
+        // Animate losing king
+        const fallenKings = document.querySelectorAll(result.winner === "w" ? ".black-king" : ".white-king");
+        fallenKings.forEach(k => k.classList.add("fallen-king"));
+    }
+
+    winnerText.innerText = message;
+    modal.classList.remove("hidden");
+
+    launchConfetti(); // 🎉 Party time!
 });
+
+
+
+
 
 // Render the initial board
 renderBoard();
