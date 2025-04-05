@@ -182,12 +182,25 @@ const getPieceUnicode = (piece) => {
 };
 
 // Socket events
+
 socket.on("playerRole", (role) => {
+    playerRole = role;
     // playerRole jaise hi backend se aaye frontend pe playerrole ko set krdia and board render krvadia
     // flipping of board is handled inside the renderboard function based on playerrole
-    playerRole = role;
-    renderBoard();
+
+    // If only one player is connected, show waiting screen
+    const waitingScreen = document.getElementById("waiting-screen");
+    waitingScreen.classList.remove("hidden");
 });
+
+// waiting screen show krne ke liye:
+socket.on("startGame", () => {
+    const waitingScreen = document.getElementById("waiting-screen");
+    waitingScreen.classList.add("hidden"); // hide waiting screen
+    renderBoard(); // show board only after second player connects
+});
+
+
 
 socket.on("spectatorRole", () => {
     // agr spectator h then just render the board set playerrole to null

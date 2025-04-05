@@ -34,22 +34,24 @@ io.on("connection", (socket) => {
 
   // Assign roles to players or add as spectator
   if (!players.white) {
-    // agr players me white naam ki field nhi h then create one(user ko white assign krdiya)
     players.white = socket.id;
-    socket.emit("playerRole", "w"); //user jo connect hua tha use bta diya uska role kya h
+    socket.emit("playerRole", "w");
     console.log(`Player assigned to White: ${socket.id}`);
   } else if (!players.black) {
-    // agr white already available h then check for black ki available h ya nhi
     players.black = socket.id;
     socket.emit("playerRole", "b");
     console.log(`Player assigned to Black: ${socket.id}`);
+
+    // ✅ Both players are now connected — notify both to start the game
+    io.to(players.white).emit("startGame");
+    io.to(players.black).emit("startGame");
   } else {
-    // agr white aur black dono already null h then other requesteirs in spectators role and emit their roles to them
     spectators.add(socket.id);
     socket.emit("spectatorRole");
-    socket.emit("boardState", chess.fen()); // Send the current board state to new spectators
+    socket.emit("boardState", chess.fen());
     console.log(`Spectator connected: ${socket.id}`);
   }
+
 
   // Notify all clients about the updated roles
   io.emit("playerUpdate", players);
